@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>成语声母筛选器</title>
+  <style>
+    body {
+      font-family: "Microsoft YaHei", sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+    }
+    .result {
+      line-height: 1.6;
+    }
+    .result div {
+      padding: 4px 0;
+    }
+  </style>
+</head>
+<body>
+  <h2>输入声母（逗号分隔，如：s,r,w）</h2>
+  <input type="text" id="filterInput" placeholder="例如：s,r,w" autocomplete="off" />
+
+  <div class="result" id="result"></div>
+  
+  <script src="idioms_data.js"></script>
+
+  <script>
+	function decodeBase64Json(b64) {
+	  const binary = atob(b64);
+	  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+	  return JSON.parse(new TextDecoder().decode(bytes));
+	}
+
+	let idiomPinyinDict;
+	try {
+	  idiomPinyinDict = decodeBase64Json(IDIOMS_B64);
+	} catch (e) {
+	  console.error('解码失败', e);
+	}
+
+    const inputEl = document.getElementById("filterInput");
+    const resultEl = document.getElementById("result");
+    const MAX_RESULTS = 20;
+
+    function getInitials(pinyinArr) {
+      return [pinyinArr[0], pinyinArr[1], pinyinArr[2], pinyinArr[3]];
+    }
+
+    function matches(idiom, requiredInitials) {
+      const initials = getInitials(idiomPinyinDict[idiom]);
+      const lowerInitials = initials.map(s => s.toLowerCase());
+      return requiredInitials.every(req => 
+        lowerInitials.some(init => init === req)
+      );
+    }
+
+    function filterAndRender() {
+      const rawInput = inputEl.value.trim();
+      resultEl.innerHTML = '';
+
+      if (!rawInput) {
+        return;
+      }
+
+      const required = rawInput
+        .split(/[,，\s]+/) 
+        .map(s => s.trim().toLowerCase())
+        .filter(s => s);
+
+      if (required.length === 0) return;
+
+      let matched = [];
+      for (const idiom in idiomPinyinDict) {
+        if (matches(idiom, required)) {
+          matched.push(idiom);
+          if (matched.length >= MAX_RESULTS) break;
+        }
+      }
+
+      if (matched.length === 0) {
+        resultEl.innerHTML = '<div>未找到匹配的成语</div>';
+      } else {
+        resultEl.innerHTML = matched.map(idiom => `<div>${idiom}</div>`).join('');
+      }
+    }
+
+    inputEl.addEventListener('input', filterAndRender);
+  </script>
+</body>
+</html>
