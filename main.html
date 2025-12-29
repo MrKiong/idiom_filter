@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
   <meta charset="UTF-8" />
   <title>成语声母筛选器</title>
   <style>
@@ -28,6 +30,7 @@
 <body>
   <h2>输入声母（逗号分隔，如：s,r,w）</h2>
   <input type="text" id="filterInput" placeholder="例如：s,r,w" autocomplete="off" />
+  <div id="initialsButtons" style="display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0;"></div>
 
   <div class="result" id="result"></div>
   
@@ -95,6 +98,46 @@
         resultEl.innerHTML = matched.map(idiom => `<div>${idiom}</div>`).join('');
       }
     }
+	// 声母列表（按你的需求调整）
+const initialsList = ['b','p','m','f','d','t','n','l','g','k','h','j','q','x','zh','ch','sh','r','z','c','s','y','w'];
+
+// 生成按钮
+const buttonsContainer = document.getElementById('initialsButtons');
+initialsList.forEach(initial => {
+  const btn = document.createElement('button');
+  btn.textContent = initial;
+  btn.style.padding = '10px 16px';
+  btn.style.fontSize = '1rem';
+  btn.style.border = '1px solid #ccc';
+  btn.style.borderRadius = '6px';
+  btn.style.background = '#fff';
+  btn.style.cursor = 'pointer';
+  btn.onclick = () => {
+    const input = document.getElementById('filterInput');
+    if (input.value && !input.value.endsWith(',')) {
+      input.value += ',';
+    }
+    input.value += initial;
+    input.focus(); // 保持焦点，方便继续点或编辑
+    filterAndRender(); // 自动触发筛选
+  };
+  buttonsContainer.appendChild(btn);
+});
+const clearBtn = document.createElement('button');
+clearBtn.textContent = '清空';
+clearBtn.style.padding = '6px 10px';
+clearBtn.style.fontSize = '0.95rem';
+clearBtn.style.border = '1px solid #ff6b6b';
+clearBtn.style.borderRadius = '6px';
+clearBtn.style.background = '#fff';
+clearBtn.style.color = '#ff6b6b';
+clearBtn.style.cursor = 'pointer';
+clearBtn.onclick = () => {
+  document.getElementById('filterInput').value = '';
+  document.getElementById('filterInput').focus();
+  filterAndRender(); // 清空后刷新结果（会变为空）
+};
+buttonsContainer.appendChild(clearBtn);
 
     inputEl.addEventListener('input', filterAndRender);
   </script>
