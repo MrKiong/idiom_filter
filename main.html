@@ -98,10 +98,7 @@
         resultEl.innerHTML = matched.map(idiom => `<div>${idiom}</div>`).join('');
       }
     }
-	// 声母列表（按你的需求调整）
 const initialsList = ['b','p','m','f','d','t','n','l','g','k','h','j','q','x','zh','ch','sh','r','z','c','s','y','w'];
-
-// 生成按钮
 const buttonsContainer = document.getElementById('initialsButtons');
 initialsList.forEach(initial => {
   const btn = document.createElement('button');
@@ -118,8 +115,7 @@ initialsList.forEach(initial => {
       input.value += ',';
     }
     input.value += initial;
-    input.focus(); // 保持焦点，方便继续点或编辑
-    filterAndRender(); // 自动触发筛选
+    filterAndRender();
   };
   buttonsContainer.appendChild(btn);
 });
@@ -135,11 +131,12 @@ clearBtn.style.cursor = 'pointer';
 clearBtn.onclick = () => {
   document.getElementById('filterInput').value = '';
   document.getElementById('filterInput').focus();
-  filterAndRender(); // 清空后刷新结果（会变为空）
+  filterAndRender(); 
 };
 buttonsContainer.appendChild(clearBtn);
 
     inputEl.addEventListener('input', filterAndRender);
   </script>
 </body>
+
 </html>
