@@ -82,7 +82,10 @@
       for (const idiom in idiomPinyinDict) {
         if (matches(idiom, required)) {
           matched.push(idiom);
-          if (matched.length >= MAX_RESULTS) break;
+          if (matched.length >= MAX_RESULTS) {
+			matched.push('....满足条件的成语超过20个');
+			break;
+			}
         }
       }
 
