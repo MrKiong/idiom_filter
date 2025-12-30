@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>图片匹配工具</title>
+    <title>蓬莱外挂</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -55,11 +55,10 @@
 <canvas id="canvas" style="display:none;"></canvas>
 
 <script>
-    const WIDTH = 390;   // 你的图片宽度
-    const HEIGHT = 260;  // 你的图片高度
+    const WIDTH = 390;   
+    const HEIGHT = 260;  
     let featureLibrary = [];
 
-    // === 1. 加载特征库 ===
     fetch('features.json')
         .then(res => {
             if (!res.ok) throw new Error('未能加载 features.json');
@@ -73,7 +72,6 @@
             alert('错误：' + err.message + '\n请确保 features.json 文件存在且格式正确。');
         });
 
-    // === 2. 拖拽/点击上传 ===
     const dropArea = document.getElementById('dropArea');
     const loading = document.getElementById('loading');
     const result = document.getElementById('result');
@@ -121,7 +119,6 @@
         }
     }
 
-    // === 3. 处理上传图片 ===
     async function processImage(file) {
         if (!featureLibrary.length) {
             alert('特征库未加载完成，请稍等或刷新页面。');
@@ -147,11 +144,17 @@
         const best = findNearest(targetFeature);
 
         loading.style.display = 'none';
-        result.textContent = `最佳匹配 ID: ${best.id}`;
+        const top3 = findTopK(targetFeature, 3);
+        let html = '<div style="text-align: left; margin: 0 auto; display: inline-block;">';
+        html += '<strong>Top 3 匹配结果：</strong><br>';
+        top3.forEach((item, idx) => {
+            html += `ANS: ${item.id} （距离: ${item.dist.toFixed(4)}）<br>`;
+        });
+        html += '</div>';
+        result.innerHTML = html;
         URL.revokeObjectURL(img.src);
     }
 
-    // === 4. 特征提取（RGB 直方图）===
     function extractFeatureFromCanvas(ctx) {
         const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
         const pixels = imgData.data;
@@ -168,22 +171,31 @@
             hist[2 * bins + b]++;
         }
 
-        // 归一化
         return hist;
         const total = hist.reduce((a, b) => a + b, 0);
         return hist.map(v => v / total);
     }
 
-    // === 5. 找最相似 ===
     function findNearest(targetFeature) {
         let best = {id: null, dist: Infinity};
         for (const item of featureLibrary) {
             const d = euclideanDistance(targetFeature, item.feature);
             if (d < best.dist) {
                 best = {id: item.id, dist: d};
+                console.log(best)
             }
         }
         return best;
+    }
+
+    function findTopK(targetFeature, k = 3) {
+        const distances = [];
+        for (const item of featureLibrary) {
+            const d = euclideanDistance(targetFeature, item.feature);
+            distances.push({id: item.id, dist: d});
+        }
+        distances.sort((a, b) => a.dist - b.dist);
+        return distances.slice(0, k); // 返回前 k 个
     }
 
     function euclideanDistance(a, b) {
