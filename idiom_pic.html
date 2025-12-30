@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>图片匹配工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 40px;
+            background: #f9f9f9;
+        }
+
+        #dropArea {
+            width: 300px;
+            height: 150px;
+            margin: 0 auto 20px;
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #dropArea.dragover {
+            background: #e6f7ff;
+            border-color: #1890ff;
+        }
+
+        #result {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c6fbb;
+            margin-top: 20px;
+            min-height: 36px;
+        }
+
+        #loading {
+            color: #888;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<h2>拖拽上传目标图片</h2>
+<div id="dropArea">点击或拖入图片</div>
+<div id="loading">正在分析...</div>
+<div id="result"></div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+    const WIDTH = 390;   // 你的图片宽度
+    const HEIGHT = 260;  // 你的图片高度
+    let featureLibrary = [];
+
+    // === 1. 加载特征库 ===
+    fetch('features.json')
+        .then(res => {
+            if (!res.ok) throw new Error('未能加载 features.json');
+            return res.json();
+        })
+        .then(data => {
+            featureLibrary = data;
+            console.log(`已加载 ${featureLibrary.length} 张图的特征`);
+        })
+        .catch(err => {
+            alert('错误：' + err.message + '\n请确保 features.json 文件存在且格式正确。');
+        });
+
+    // === 2. 拖拽/点击上传 ===
+    const dropArea = document.getElementById('dropArea');
+    const loading = document.getElementById('loading');
+    const result = document.getElementById('result');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+        dropArea.classList.add('dragover');
+    }
+
+    function unhighlight() {
+        dropArea.classList.remove('dragover');
+    }
+
+    dropArea.addEventListener('drop', handleDrop, false);
+    dropArea.addEventListener('click', () => document.getElementById('fileElem').click());
+    dropArea.innerHTML += `<input type="file" id="fileElem" accept="image/*" style="display:none;">`;
+    document.getElementById('fileElem').addEventListener('change', handleFileSelect, false);
+
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) processImage(file);
+    }
+
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const file = dt.files[0];
+        if (file && file.type.startsWith('image/')) {
+            processImage(file);
+        }
+    }
+
+    // === 3. 处理上传图片 ===
+    async function processImage(file) {
+        if (!featureLibrary.length) {
+            alert('特征库未加载完成，请稍等或刷新页面。');
+            return;
+        }
+
+        result.textContent = '';
+        loading.style.display = 'block';
+
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        await img.decode();
+
+        const canvas = document.getElementById('canvas');
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+        ctx.drawImage(img, 0, 0, WIDTH, HEIGHT);
+
+        const targetFeature = extractFeatureFromCanvas(ctx);
+        console.log(targetFeature);
+        const best = findNearest(targetFeature);
+
+        loading.style.display = 'none';
+        result.textContent = `最佳匹配 ID: ${best.id}`;
+        URL.revokeObjectURL(img.src);
+    }
+
+    // === 4. 特征提取（RGB 直方图）===
+    function extractFeatureFromCanvas(ctx) {
+        const imgData = ctx.getImageData(0, 0, WIDTH, HEIGHT);
+        const pixels = imgData.data;
+        const bins = 64;
+        const hist = new Array(bins * 3).fill(0);
+        const binWidth = 256 / bins;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+            const r = Math.min(Math.floor(pixels[i] / binWidth), bins - 1);
+            const g = Math.min(Math.floor(pixels[i + 1] / binWidth), bins - 1);
+            const b = Math.min(Math.floor(pixels[i + 2] / binWidth), bins - 1);
+            hist[r]++;
+            hist[bins + g]++;
+            hist[2 * bins + b]++;
+        }
+
+        // 归一化
+        return hist;
+        const total = hist.reduce((a, b) => a + b, 0);
+        return hist.map(v => v / total);
+    }
+
+    // === 5. 找最相似 ===
+    function findNearest(targetFeature) {
+        let best = {id: null, dist: Infinity};
+        for (const item of featureLibrary) {
+            const d = euclideanDistance(targetFeature, item.feature);
+            if (d < best.dist) {
+                best = {id: item.id, dist: d};
+            }
+        }
+        return best;
+    }
+
+    function euclideanDistance(a, b) {
+        let sum = 0;
+        for (let i = 0; i < a.length; i++) {
+            const diff = a[i] - b[i];
+            sum += diff * diff;
+        }
+        return Math.sqrt(sum);
+    }
+</script>
+
+</body>
+</html>
