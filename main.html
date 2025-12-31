@@ -1,157 +1,194 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
 
-  <meta charset="UTF-8" />
-  <title>成语声母筛选器</title>
-  <style>
-    body {
-      font-family: "Microsoft YaHei", sans-serif;
-      padding: 20px;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    input {
-      width: 100%;
-      padding: 10px;
-      font-size: 16px;
-      margin-bottom: 20px;
-      box-sizing: border-box;
-    }
-    .result {
-      line-height: 1.6;
-    }
-    .result div {
-      padding: 4px 0;
-    }
-  </style>
+    <meta charset="UTF-8"/>
+    <title>猜成语外置大脑</title>
+    <style>
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .result {
+            line-height: 1.6;
+        }
+
+        .result div {
+            padding: 4px 0;
+        }
+    </style>
 </head>
 <body>
-  <h2>输入声母（逗号分隔，如：s,r,w）</h2>
-  <input type="text" id="filterInput" placeholder="例如：s,r,w" autocomplete="off" />
-  <div id="initialsButtons" style="display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0;"></div>
+<h2>输入声母（逗号分隔，如：s,r,w）</h2>
+<input type="text" id="filterInput" placeholder="例如：s,r,w" autocomplete="off"/>
+<div id="initialsButtons" style="display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0;"></div>
 
-  <div class="result" id="result"></div>
-  
-  <script src="idioms_data.js"></script>
+<div class="result" id="result"></div>
 
-  <script>
-	function decodeBase64Json(b64) {
-	  const binary = atob(b64);
-	  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-	  return JSON.parse(new TextDecoder().decode(bytes));
-	}
+<script src="idioms_data.js"></script>
 
-	let idiomPinyinDict;
-	try {
-	  idiomPinyinDict = decodeBase64Json(IDIOMS_B64);
-	} catch (e) {
-	  console.error('解码失败', e);
-	}
+<script>
+    function decodeBase64Json(b64) {
+        const binary = atob(b64);
+        const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+        return JSON.parse(new TextDecoder().decode(bytes));
+    }
+
+    let idiomPinyinDict;
+    try {
+        idiomPinyinDict = decodeBase64Json(IDIOMS_B64);
+    } catch (e) {
+        console.error('解码失败', e);
+    }
 
     const inputEl = document.getElementById("filterInput");
     const resultEl = document.getElementById("result");
     const MAX_RESULTS = 20;
 
     function getInitials(pinyinArr) {
-      return [pinyinArr[0], pinyinArr[1], pinyinArr[2], pinyinArr[3]];
+        return [pinyinArr[0], pinyinArr[1], pinyinArr[2], pinyinArr[3]];
     }
 
     function matches(idiom, requiredInitials) {
-      const initials = getInitials(idiomPinyinDict[idiom]);
-      const lowerInitials = initials.map(s => s.toLowerCase());
-	  const idiomFreq = {};
-	  lowerInitials.forEach(s => {
-		idiomFreq[s] = (idiomFreq[s] || 0) + 1;
-	  });
+        const initials = idiomPinyinDict[idiom];
+        const lowerInitials = initials.map(s => s.toLowerCase());
+        const idiomFreq = {};
+        lowerInitials.forEach(s => {
+            idiomFreq[s] = (idiomFreq[s] || 0) + 1;
+        });
 
-	  const requiredFreq = {};
-	  requiredInitials.forEach(s => {
-		requiredFreq[s] = (requiredFreq[s] || 0) + 1;
-	  });
-	  for (const [initial, needed] of Object.entries(requiredFreq)) {
-		if ((idiomFreq[initial] || 0) < needed) {
-		  return false;
-		}
-	  }
-      return true;
+        const requiredFreq = {};
+        requiredInitials.forEach(s => {
+            requiredFreq[s] = (requiredFreq[s] || 0) + 1;
+        });
+        for (const [initial, needed] of Object.entries(requiredFreq)) {
+            if ((idiomFreq[initial] || 0) < needed) {
+                return false;
+            }
+        }
+        return true;
     }
 
     function filterAndRender() {
-      const rawInput = inputEl.value.trim();
-      resultEl.innerHTML = '';
+        const rawInput = inputEl.value.trim();
+        resultEl.innerHTML = '';
 
-      if (!rawInput) {
-        return;
-      }
-
-      const required = rawInput
-        .split(/[,，\s]+/) 
-        .map(s => s.trim().toLowerCase())
-        .filter(s => s);
-
-      if (required.length === 0) return;
-
-      let matched = [];
-      for (const idiom in idiomPinyinDict) {
-        if (matches(idiom, required)) {
-          matched.push(idiom);
-          if (matched.length >= MAX_RESULTS) {
-			matched.push('....满足条件的成语超过20个');
-			break;
-			}
+        if (!rawInput) {
+            return;
         }
-      }
 
-      if (matched.length === 0) {
-        resultEl.innerHTML = '<div>未找到匹配的成语</div>';
-      } else {
-        resultEl.innerHTML = matched.map(idiom => `<div>${idiom}</div>`).join('');
-      }
-    }
-	// 声母列表（按你的需求调整）
-const initialsList = ['b','p','m','f','d','t','n','l','g','k','h','j','q','x','zh','ch','sh','r','z','c','s','y','w'];
+        const required = rawInput
+            .split(/[,，\s]+/)
+            .map(s => s.trim().toLowerCase())
+            .filter(s => s);
 
-// 生成按钮
-const buttonsContainer = document.getElementById('initialsButtons');
-initialsList.forEach(initial => {
-  const btn = document.createElement('button');
-  btn.textContent = initial;
-  btn.style.padding = '10px 16px';
-  btn.style.fontSize = '1rem';
-  btn.style.border = '1px solid #ccc';
-  btn.style.borderRadius = '6px';
-  btn.style.background = '#fff';
-  btn.style.cursor = 'pointer';
-  btn.onclick = () => {
-    const input = document.getElementById('filterInput');
-    if (input.value && !input.value.endsWith(',')) {
-      input.value += ',';
+        if (required.length === 0) return;
+
+        let matched = [];
+        for (const idiom in idiomPinyinDict) {
+            if (matches(idiom, required)) {
+                matched.push(idiom);
+                if (matched.length >= MAX_RESULTS) {
+                    matched.push('....满足条件的成语超过20个');
+                    break;
+                }
+            }
+        }
+
+        if (matched.length === 0) {
+            resultEl.innerHTML = '<div>未找到匹配的成语</div>';
+        } else {
+            resultEl.innerHTML = matched.map(idiom => `<div>${idiom}</div>`).join('');
+        }
     }
-    input.value += initial;
-    input.focus(); // 保持焦点，方便继续点或编辑
-    filterAndRender(); // 自动触发筛选
-  };
-  buttonsContainer.appendChild(btn);
-});
-const clearBtn = document.createElement('button');
-clearBtn.textContent = '清空';
-clearBtn.style.padding = '6px 10px';
-clearBtn.style.fontSize = '0.95rem';
-clearBtn.style.border = '1px solid #ff6b6b';
-clearBtn.style.borderRadius = '6px';
-clearBtn.style.background = '#fff';
-clearBtn.style.color = '#ff6b6b';
-clearBtn.style.cursor = 'pointer';
-clearBtn.onclick = () => {
-  document.getElementById('filterInput').value = '';
-  document.getElementById('filterInput').focus();
-  filterAndRender(); // 清空后刷新结果（会变为空）
-};
-buttonsContainer.appendChild(clearBtn);
+
+    // 声母列表（按你的需求调整）
+    const initialsList = ['b', 'p', 'm', 'f', 'd', 't', 'n', 'l', 'g', 'k', 'h', 'j', 'q', 'x', 'zh', 'ch', 'sh', 'r', 'z', 'c', 's', 'y', 'w'];
+    // 生成按钮
+    const buttonsContainer = document.getElementById('initialsButtons');
+    const br_space = document.createElement('div');
+    br_space.style.width = '100%';
+    br_space.style.height = '0';
+    initialsList.forEach(initial => {
+        const btn = document.createElement('button');
+        btn.textContent = initial;
+        btn.style.padding = '10px 16px';
+        btn.style.fontSize = '1rem';
+        btn.style.border = '1px solid #ccc';
+        btn.style.borderRadius = '6px';
+        btn.style.background = '#fff';
+        btn.style.cursor = 'pointer';
+        btn.onclick = () => {
+            const input = document.getElementById('filterInput');
+            if (input.value && !input.value.endsWith(',')) {
+                input.value += ',';
+            }
+            input.value += initial;
+            input.focus(); // 保持焦点，方便继续点或编辑
+            filterAndRender(); // 自动触发筛选
+        };
+        buttonsContainer.appendChild(btn);
+    });
+
+    buttonsContainer.appendChild(br_space);
+
+    // const finalsList = [
+    // "vn", "ve", "van", "v", "uo", "un", "ui", "ue", "uang",
+    // "uan", "uai","ua", "ou", "iu", "iong", "ong", "io", "ing",
+    // "in", "ie", "iao", "iang", "ian", "ia", "er", "eng", "en",
+    // "ei", "ao", "ang", "an", "ai", "u", "o", "i", "e", "a"];
+    // // 生成按钮
+    // finalsList.forEach(initial => {
+    //     const btn = document.createElement('button');
+    //     btn.textContent = initial;
+    //     btn.style.padding = '10px 16px';
+    //     btn.style.fontSize = '1rem';
+    //     btn.style.border = '1px solid #ccc';
+    //     btn.style.borderRadius = '6px';
+    //     btn.style.background = '#fff';
+    //     btn.style.cursor = 'pointer';
+    //     btn.onclick = () => {
+    //         const input = document.getElementById('filterInput');
+    //         if (input.value && !input.value.endsWith(',')) {
+    //             input.value += ',';
+    //         }
+    //         input.value += initial;
+    //         input.focus(); // 保持焦点，方便继续点或编辑
+    //         filterAndRender(); // 自动触发筛选
+    //     };
+    //     buttonsContainer.appendChild(btn);
+    // });
+    // buttonsContainer.appendChild(br_space);
+
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = '清空';
+    clearBtn.style.padding = '6px 10px';
+    clearBtn.style.fontSize = '0.95rem';
+    clearBtn.style.border = '1px solid #ff6b6b';
+    clearBtn.style.borderRadius = '6px';
+    clearBtn.style.background = '#fff';
+    clearBtn.style.color = '#ff6b6b';
+    clearBtn.style.cursor = 'pointer';
+    clearBtn.onclick = () => {
+        document.getElementById('filterInput').value = '';
+        document.getElementById('filterInput').focus();
+        filterAndRender(); // 清空后刷新结果（会变为空）
+    };
+    buttonsContainer.appendChild(clearBtn);
 
     inputEl.addEventListener('input', filterAndRender);
-  </script>
+</script>
 </body>
 </html>
